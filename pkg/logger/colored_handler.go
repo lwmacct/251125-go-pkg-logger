@@ -226,33 +226,40 @@ func (h *coloredHandler) clipPath(path string) string {
 		if depth <= 2 {
 			return path
 		}
+		// 深度 > 2，裁剪到保留最后 3 层
+		return clipToDepth(path, 3)
 	}
 
 	if h.config.CallerClip != "" {
 		return strings.Replace(path, h.config.CallerClip, "", 1)
 	}
 
-	// 默认裁剪：只保留最后 3 层路径
+	// 默认裁剪：只保留最后 3 层路径（针对绝对路径）
 	if len(path) > 0 && path[0] == '/' {
-		count := 0
-		pos := len(path) - 1
-
-		for i := len(path) - 1; i >= 0; i-- {
-			if path[i] == '/' {
-				count++
-				if count == 3 {
-					pos = i
-					break
-				}
-			}
-		}
-
-		if count >= 3 {
-			return path[pos:]
-		}
+		return clipToDepth(path, 3)
 	}
 
 	return filepath.Base(path)
+}
+
+// clipToDepth 保留路径的最后 n 层
+// 例如：clipToDepth("a/b/c/d.go:1", 3) -> "b/c/d.go:1"
+func clipToDepth(path string, depth int) string {
+	count := 0
+	for i := len(path) - 1; i >= 0; i-- {
+		if path[i] == '/' {
+			count++
+			if count == depth {
+				// 跳过开头的 / (如果有)
+				if i+1 < len(path) {
+					return path[i+1:]
+				}
+				return path[i:]
+			}
+		}
+	}
+	// 深度不足，返回原路径
+	return path
 }
 
 // flattenAttr 将属性平铺到 fields 中，支持 JSON 字符串、map、struct 的递归展开
