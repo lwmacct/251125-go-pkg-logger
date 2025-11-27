@@ -214,8 +214,19 @@ func (h *coloredHandler) buildKey(key string) string {
 
 // clipPath 裁剪路径
 func (h *coloredHandler) clipPath(path string) string {
+	originalPath := path
+
 	// 优先处理 /workspace/xxx/ 前缀
 	path = clipWorkspacePath(path)
+
+	// 如果 workspace 切割成功（路径发生了变化），检查深度
+	// 深度 <= 2 时直接返回，不再进一步裁剪
+	if path != originalPath {
+		depth := strings.Count(path, "/")
+		if depth <= 2 {
+			return path
+		}
+	}
 
 	if h.config.CallerClip != "" {
 		return strings.Replace(path, h.config.CallerClip, "", 1)
