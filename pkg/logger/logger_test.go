@@ -841,3 +841,56 @@ func TestInitWithInvalidConfig(t *testing.T) {
 		t.Errorf("Init() error = %v, expected to contain 'invalid log format'", err)
 	}
 }
+
+func TestClipWorkspacePath(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "workspace path with project dir",
+			input:    "/workspace/251127-ai-agent-hatch/main.go:146",
+			expected: "main.go:146",
+		},
+		{
+			name:     "workspace path with nested dirs",
+			input:    "/workspace/my-project/pkg/logger/logger.go:42",
+			expected: "pkg/logger/logger.go:42",
+		},
+		{
+			name:     "workspace path without trailing slash",
+			input:    "/workspace/project",
+			expected: "/workspace/project", // 没有后续路径，保持原样
+		},
+		{
+			name:     "no workspace prefix",
+			input:    "/home/user/project/main.go:10",
+			expected: "/home/user/project/main.go:10",
+		},
+		{
+			name:     "workspace in middle of path",
+			input:    "/apps/data/workspace/251125-go-mod-logger/pkg/logger/logger.go:100",
+			expected: "pkg/logger/logger.go:100",
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "just workspace",
+			input:    "/workspace/",
+			expected: "/workspace/",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := clipWorkspacePath(tt.input)
+			if result != tt.expected {
+				t.Errorf("clipWorkspacePath(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}

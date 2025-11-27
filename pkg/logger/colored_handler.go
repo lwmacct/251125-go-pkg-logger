@@ -214,6 +214,9 @@ func (h *coloredHandler) buildKey(key string) string {
 
 // clipPath 裁剪路径
 func (h *coloredHandler) clipPath(path string) string {
+	// 优先处理 /workspace/xxx/ 前缀
+	path = clipWorkspacePath(path)
+
 	if h.config.CallerClip != "" {
 		return strings.Replace(path, h.config.CallerClip, "", 1)
 	}

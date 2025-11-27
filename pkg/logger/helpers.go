@@ -3,6 +3,7 @@ package logger
 import (
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 )
 
@@ -176,4 +177,30 @@ func knownTimezoneOffset(timezone string) *time.Location {
 		return time.FixedZone(timezone, offset)
 	}
 	return nil
+}
+
+// clipWorkspacePath 裁剪 /workspace/xxx/ 前缀
+//
+// 当路径包含 /workspace/ 时，去掉 /workspace/ 及其后一级目录
+// 例如：/workspace/251127-ai-agent-hatch/main.go:146 -> main.go:146
+//
+// 这在容器化或沙盒环境中很有用，可以使日志中的源代码位置更简洁
+func clipWorkspacePath(path string) string {
+	const workspacePrefix = "/workspace/"
+	idx := strings.Index(path, workspacePrefix)
+	if idx == -1 {
+		return path
+	}
+
+	// 找到 /workspace/ 后面的部分
+	rest := path[idx+len(workspacePrefix):]
+
+	// 找到下一个 /，跳过项目目录名
+	slashIdx := strings.Index(rest, "/")
+	if slashIdx == -1 {
+		return path
+	}
+
+	// 返回项目目录后面的部分
+	return rest[slashIdx+1:]
 }

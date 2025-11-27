@@ -75,7 +75,8 @@ func (h *customJSONHandler) Handle(ctx context.Context, r slog.Record) error {
 		fs := runtime.CallersFrames([]uintptr{r.PC})
 		f, _ := fs.Next()
 		if f.File != "" {
-			m["source"] = fmt.Sprintf("%s:%d", f.File, f.Line)
+			source := fmt.Sprintf("%s:%d", f.File, f.Line)
+			m["source"] = clipWorkspacePath(source)
 		}
 	}
 
