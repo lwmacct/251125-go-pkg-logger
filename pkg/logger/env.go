@@ -14,7 +14,7 @@ import (
 //   - LOG_FORMAT: 输出格式 (json, text, color/colored)，默认 color
 //   - LOG_OUTPUT: 输出目标 (stdout, stderr, 或文件路径)，默认 stdout
 //   - LOG_ADD_SOURCE: 是否添加源代码位置 (true, false)，默认 true
-//   - LOG_TIME_FORMAT: 时间格式，默认 rfc3339ms
+//   - LOG_TIME_FORMAT: 时间格式，默认 datetime
 //
 // 时间格式可选值：datetime, rfc3339, rfc3339ms, unix, unixms, unixfloat
 //
@@ -33,7 +33,7 @@ func InitFromEnv() error {
 		Format:     getEnv("LOG_FORMAT", "color"), // 默认使用彩色输出
 		Output:     getEnv("LOG_OUTPUT", "stdout"),
 		AddSource:  getEnvBool("LOG_ADD_SOURCE", true), // 默认启用源代码位置
-		TimeFormat: getEnv("LOG_TIME_FORMAT", "rfc3339ms"),
+		TimeFormat: getEnv("LOG_TIME_FORMAT", "datetime"),
 	}
 
 	return Init(cfg)
