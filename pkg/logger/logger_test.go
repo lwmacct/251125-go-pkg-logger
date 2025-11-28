@@ -6,6 +6,9 @@ import (
 	"log/slog"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestInit(t *testing.T) {
@@ -42,8 +45,10 @@ func TestInit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := Init(tt.config)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Init() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}
@@ -57,13 +62,8 @@ func TestNew(t *testing.T) {
 	}
 
 	logger, err := New(cfg)
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
-
-	if logger == nil {
-		t.Error("New() returned nil logger")
-	}
+	require.NoError(t, err)
+	assert.NotNil(t, logger)
 }
 
 func TestParseLevel(t *testing.T) {
@@ -90,9 +90,7 @@ func TestParseLevel(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
 			got := parseLevel(tt.input)
-			if got != tt.want {
-				t.Errorf("parseLevel(%s) = %v, want %v", tt.input, got, tt.want)
-			}
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -103,14 +101,11 @@ func TestWithAttrs(t *testing.T) {
 	logger := slog.New(handler)
 	slog.SetDefault(logger)
 
-	// 使用 WithAttrs 创建带属性的 logger
 	loggerWithAttrs := WithAttrs("key", "value")
 	loggerWithAttrs.Info("test message")
 
 	output := buf.String()
-	if !strings.Contains(output, "key=value") {
-		t.Errorf("WithAttrs() output missing attribute, got: %s", output)
-	}
+	assert.Contains(t, output, "key=value")
 }
 
 func TestFromContext(t *testing.T) {
@@ -118,17 +113,13 @@ func TestFromContext(t *testing.T) {
 
 	// 测试从空 context 获取 logger（应该返回默认 logger）
 	logger := FromContext(ctx)
-	if logger == nil {
-		t.Error("FromContext() returned nil for empty context")
-	}
+	assert.NotNil(t, logger, "FromContext should not return nil for empty context")
 
 	// 测试从带有 logger 的 context 获取
 	customLogger := slog.Default().With("custom", "value")
 	ctxWithLogger := WithLogger(ctx, customLogger)
 	retrievedLogger := FromContext(ctxWithLogger)
-	if retrievedLogger != customLogger {
-		t.Error("FromContext() did not return the expected logger")
-	}
+	assert.Equal(t, customLogger, retrievedLogger)
 }
 
 func TestWithRequestID(t *testing.T) {
@@ -137,26 +128,19 @@ func TestWithRequestID(t *testing.T) {
 
 	ctxWithReqID := WithRequestID(ctx, requestID)
 	logger := FromContext(ctxWithReqID)
-
-	// 验证不会 panic 并且返回有效的 logger
-	if logger == nil {
-		t.Error("WithRequestID() resulted in nil logger")
-	}
+	assert.NotNil(t, logger)
 
 	// 验证可以正常记录日志
 	var buf bytes.Buffer
 	handler := slog.NewTextHandler(&buf, nil)
 	slog.SetDefault(slog.New(handler))
 
-	// 重新创建带 request_id 的 logger
 	ctxWithReqID = WithRequestID(context.Background(), requestID)
 	logger = FromContext(ctxWithReqID)
 	logger.Info("test message")
 
 	output := buf.String()
-	if !strings.Contains(output, "test message") {
-		t.Logf("Output: %s", output)
-	}
+	assert.Contains(t, output, "test message")
 }
 
 func TestFormatBytes(t *testing.T) {
@@ -175,9 +159,7 @@ func TestFormatBytes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.want, func(t *testing.T) {
 			got := FormatBytes(tt.input)
-			if got != tt.want {
-				t.Errorf("FormatBytes(%d) = %s, want %s", tt.input, got, tt.want)
-			}
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -192,44 +174,27 @@ func TestJSONHandlerAddSource(t *testing.T) {
 	logger.Info("test message")
 
 	output := buf.String()
-
-	// 验证 source 字段包含文件路径和行号格式 (file.go:123)
-	if !strings.Contains(output, `"source":`) {
-		t.Errorf("AddSource enabled but source field not found in output: %s", output)
-	}
-	if strings.Contains(output, `"source":"enabled"`) {
-		t.Errorf("AddSource should contain file:line, not 'enabled': %s", output)
-	}
-	// 验证格式正确 (包含 .go: 表示文件名和行号)
-	if !strings.Contains(output, ".go:") {
-		t.Errorf("source should contain file.go:line format: %s", output)
-	}
+	assert.Contains(t, output, `"source":`, "AddSource enabled but source field not found")
+	assert.NotContains(t, output, `"source":"enabled"`, "AddSource should contain file:line, not 'enabled'")
+	assert.Contains(t, output, ".go:", "source should contain file.go:line format")
 }
 
 func TestJSONHandlerWithGroup(t *testing.T) {
 	var buf bytes.Buffer
 	handler := newJSONHandler(&buf, nil, "rfc3339ms", "")
 
-	// 创建带有 group 的 logger
 	logger := slog.New(handler).WithGroup("request")
 	logger.Info("test", "method", "GET", "path", "/api")
 
 	output := buf.String()
-
-	// 验证 group 嵌套结构
-	if !strings.Contains(output, `"request":{`) {
-		t.Errorf("WithGroup should create nested structure, got: %s", output)
-	}
-	if !strings.Contains(output, `"method":"GET"`) {
-		t.Errorf("method attribute should be in output: %s", output)
-	}
+	assert.Contains(t, output, `"request":{`, "WithGroup should create nested structure")
+	assert.Contains(t, output, `"method":"GET"`)
 }
 
 func TestJSONHandlerNestedGroups(t *testing.T) {
 	var buf bytes.Buffer
 	handler := newJSONHandler(&buf, nil, "rfc3339ms", "")
 
-	// 创建多层嵌套的 group
 	logger := slog.New(handler).
 		WithGroup("request").
 		With("id", "123").
@@ -238,46 +203,29 @@ func TestJSONHandlerNestedGroups(t *testing.T) {
 	logger.Info("test", "content-type", "application/json")
 
 	output := buf.String()
-
-	// 验证嵌套结构
-	if !strings.Contains(output, `"request":{`) {
-		t.Errorf("first group should exist: %s", output)
-	}
-	if !strings.Contains(output, `"id":"123"`) {
-		t.Errorf("id should be under request group: %s", output)
-	}
-	if !strings.Contains(output, `"headers":{`) {
-		t.Errorf("nested headers group should exist: %s", output)
-	}
+	assert.Contains(t, output, `"request":{`, "first group should exist")
+	assert.Contains(t, output, `"id":"123"`, "id should be under request group")
+	assert.Contains(t, output, `"headers":{`, "nested headers group should exist")
 }
 
 func TestColoredHandlerJSONFlatten(t *testing.T) {
 	var buf bytes.Buffer
 	config := &ColoredHandlerConfig{
 		Level:        slog.LevelInfo,
-		EnableColor:  false, // 禁用颜色便于测试
+		EnableColor:  false,
 		PriorityKeys: []string{"time", "level", "msg"},
 	}
 	handler := NewColoredHandler(&buf, config)
 	logger := slog.New(handler)
 
-	// 测试 JSON 字符串平铺
 	logger.Info("request", "body", `{"user":"alice","age":30}`)
 
 	output := buf.String()
 	t.Logf("Output: %s", output)
 
-	// 验证 JSON 被平铺
-	if !strings.Contains(output, `"body.user":"alice"`) {
-		t.Errorf("JSON should be flattened, expected body.user, got: %s", output)
-	}
-	if !strings.Contains(output, `"body.age":"30"`) {
-		t.Errorf("JSON should be flattened, expected body.age, got: %s", output)
-	}
-	// 不应该包含原始 JSON 字符串
-	if strings.Contains(output, `"body":"{`) {
-		t.Errorf("should not contain escaped JSON string: %s", output)
-	}
+	assert.Contains(t, output, `"body.user":"alice"`, "JSON should be flattened")
+	assert.Contains(t, output, `"body.age":"30"`, "JSON should be flattened")
+	assert.NotContains(t, output, `"body":"{`, "should not contain escaped JSON string")
 }
 
 func TestColoredHandlerNestedJSONFlatten(t *testing.T) {
@@ -290,26 +238,15 @@ func TestColoredHandlerNestedJSONFlatten(t *testing.T) {
 	handler := NewColoredHandler(&buf, config)
 	logger := slog.New(handler)
 
-	// 测试嵌套 JSON 平铺
 	logger.Info("data", "payload", `{"user":{"name":"bob","id":123},"tags":["go","rust"]}`)
 
 	output := buf.String()
 	t.Logf("Output: %s", output)
 
-	// 验证嵌套对象被平铺
-	if !strings.Contains(output, `"payload.user.name":"bob"`) {
-		t.Errorf("nested JSON should be flattened: %s", output)
-	}
-	if !strings.Contains(output, `"payload.user.id":"123"`) {
-		t.Errorf("nested JSON number should be flattened: %s", output)
-	}
-	// 验证数组被平铺
-	if !strings.Contains(output, `"payload.tags[0]":"go"`) {
-		t.Errorf("array should be flattened with index: %s", output)
-	}
-	if !strings.Contains(output, `"payload.tags[1]":"rust"`) {
-		t.Errorf("array should be flattened with index: %s", output)
-	}
+	assert.Contains(t, output, `"payload.user.name":"bob"`, "nested JSON should be flattened")
+	assert.Contains(t, output, `"payload.user.id":"123"`, "nested JSON number should be flattened")
+	assert.Contains(t, output, `"payload.tags[0]":"go"`, "array should be flattened with index")
+	assert.Contains(t, output, `"payload.tags[1]":"rust"`, "array should be flattened with index")
 }
 
 func TestColoredHandlerBasic(t *testing.T) {
@@ -323,26 +260,16 @@ func TestColoredHandlerBasic(t *testing.T) {
 	handler := NewColoredHandler(&buf, config)
 	logger := slog.New(handler)
 
-	// 测试各级别日志
 	logger.Debug("debug message")
 	logger.Info("info message")
 	logger.Warn("warn message")
 	logger.Error("error message")
 
 	output := buf.String()
-
-	if !strings.Contains(output, `"level":"DEBUG"`) {
-		t.Errorf("should contain DEBUG level: %s", output)
-	}
-	if !strings.Contains(output, `"level":"INFO"`) {
-		t.Errorf("should contain INFO level: %s", output)
-	}
-	if !strings.Contains(output, `"level":"WARN"`) {
-		t.Errorf("should contain WARN level: %s", output)
-	}
-	if !strings.Contains(output, `"level":"ERROR"`) {
-		t.Errorf("should contain ERROR level: %s", output)
-	}
+	assert.Contains(t, output, `"level":"DEBUG"`)
+	assert.Contains(t, output, `"level":"INFO"`)
+	assert.Contains(t, output, `"level":"WARN"`)
+	assert.Contains(t, output, `"level":"ERROR"`)
 }
 
 func TestColoredHandlerLevelFilter(t *testing.T) {
@@ -360,19 +287,10 @@ func TestColoredHandlerLevelFilter(t *testing.T) {
 	logger.Error("error")
 
 	output := buf.String()
-
-	if strings.Contains(output, "debug") {
-		t.Errorf("DEBUG should be filtered: %s", output)
-	}
-	if strings.Contains(output, `"msg":"info"`) {
-		t.Errorf("INFO should be filtered: %s", output)
-	}
-	if !strings.Contains(output, "warn") {
-		t.Errorf("WARN should be present: %s", output)
-	}
-	if !strings.Contains(output, "error") {
-		t.Errorf("ERROR should be present: %s", output)
-	}
+	assert.NotContains(t, output, "debug", "DEBUG should be filtered")
+	assert.NotContains(t, output, `"msg":"info"`, "INFO should be filtered")
+	assert.Contains(t, output, "warn", "WARN should be present")
+	assert.Contains(t, output, "error", "ERROR should be present")
 }
 
 func TestColoredHandlerWithAttrs(t *testing.T) {
@@ -387,13 +305,8 @@ func TestColoredHandlerWithAttrs(t *testing.T) {
 	logger.Info("started")
 
 	output := buf.String()
-
-	if !strings.Contains(output, `"service":"api"`) {
-		t.Errorf("should contain service attr: %s", output)
-	}
-	if !strings.Contains(output, `"version":"1.0"`) {
-		t.Errorf("should contain version attr: %s", output)
-	}
+	assert.Contains(t, output, `"service":"api"`)
+	assert.Contains(t, output, `"version":"1.0"`)
 }
 
 func TestColoredHandlerWithGroupBasic(t *testing.T) {
@@ -409,11 +322,7 @@ func TestColoredHandlerWithGroupBasic(t *testing.T) {
 
 	output := buf.String()
 	t.Logf("Output: %s", output)
-
-	// WithGroup 应该为属性添加前缀
-	if !strings.Contains(output, `"request.method":"POST"`) {
-		t.Errorf("WithGroup should add prefix, expected request.method: %s", output)
-	}
+	assert.Contains(t, output, `"request.method":"POST"`, "WithGroup should add prefix")
 }
 
 func TestJSONHandlerTimeFormats(t *testing.T) {
@@ -435,15 +344,12 @@ func TestJSONHandlerTimeFormats(t *testing.T) {
 			logger.Info("test")
 
 			output := buf.String()
-			if !strings.Contains(output, `"time":`) {
-				t.Errorf("should contain time field: %s", output)
-			}
+			assert.Contains(t, output, `"time":`)
 		})
 	}
 }
 
 func TestNewWithCloser(t *testing.T) {
-	// 测试 stdout（closer 应为 nil）
 	cfg := &Config{
 		Level:  "INFO",
 		Format: "text",
@@ -451,39 +357,26 @@ func TestNewWithCloser(t *testing.T) {
 	}
 
 	logger, closer, err := NewWithCloser(cfg)
-	if err != nil {
-		t.Fatalf("NewWithCloser() error = %v", err)
-	}
-	if logger == nil {
-		t.Error("logger should not be nil")
-	}
-	if closer != nil {
-		t.Error("closer should be nil for stdout")
-	}
+	require.NoError(t, err)
+	assert.NotNil(t, logger)
+	assert.Nil(t, closer, "closer should be nil for stdout")
 }
 
 func TestClose(t *testing.T) {
-	// 先初始化到 stdout
 	err := Init(&Config{
 		Level:  "INFO",
 		Format: "text",
 		Output: "stdout",
 	})
-	if err != nil {
-		t.Fatalf("Init() error = %v", err)
-	}
+	require.NoError(t, err)
 
 	// Close 应该不报错
 	err = Close()
-	if err != nil {
-		t.Errorf("Close() error = %v", err)
-	}
+	assert.NoError(t, err)
 
 	// 重复 Close 也不应该报错
 	err = Close()
-	if err != nil {
-		t.Errorf("second Close() error = %v", err)
-	}
+	assert.NoError(t, err)
 }
 
 func TestEscapeString(t *testing.T) {
@@ -502,9 +395,7 @@ func TestEscapeString(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
 			got := escapeString(tt.input)
-			if got != tt.want {
-				t.Errorf("escapeString(%q) = %q, want %q", tt.input, got, tt.want)
-			}
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -517,18 +408,11 @@ func TestLogError(t *testing.T) {
 	err := LogError(context.Background(), "operation failed",
 		context.DeadlineExceeded, "user_id", "123")
 
-	// 验证返回原始错误
-	if err != context.DeadlineExceeded {
-		t.Errorf("LogError should return original error")
-	}
+	assert.Equal(t, context.DeadlineExceeded, err, "LogError should return original error")
 
 	output := buf.String()
-	if !strings.Contains(output, "operation failed") {
-		t.Errorf("should log message: %s", output)
-	}
-	if !strings.Contains(output, "user_id=123") {
-		t.Errorf("should log attrs: %s", output)
-	}
+	assert.Contains(t, output, "operation failed")
+	assert.Contains(t, output, "user_id=123")
 }
 
 func TestLogAndWrap(t *testing.T) {
@@ -539,15 +423,10 @@ func TestLogAndWrap(t *testing.T) {
 	originalErr := context.DeadlineExceeded
 	wrappedErr := LogAndWrap("fetch failed", originalErr, "url", "http://example.com")
 
-	// 验证错误被包装
-	if !strings.Contains(wrappedErr.Error(), "fetch failed") {
-		t.Errorf("error should be wrapped: %v", wrappedErr)
-	}
+	assert.Contains(t, wrappedErr.Error(), "fetch failed", "error should be wrapped")
 
 	output := buf.String()
-	if !strings.Contains(output, "fetch failed") {
-		t.Errorf("should log message: %s", output)
-	}
+	assert.Contains(t, output, "fetch failed")
 }
 
 func TestColoredHandlerNonJSONString(t *testing.T) {
@@ -559,55 +438,31 @@ func TestColoredHandlerNonJSONString(t *testing.T) {
 	handler := NewColoredHandler(&buf, config)
 	logger := slog.New(handler)
 
-	// 测试非 JSON 字符串不会被解析
 	logger.Info("test", "data", "just a plain string")
 	logger.Info("test", "invalid", "{not valid json")
 
 	output := buf.String()
-
-	if !strings.Contains(output, `"data":"just a plain string"`) {
-		t.Errorf("plain string should not be flattened: %s", output)
-	}
-	if !strings.Contains(output, `"invalid":"{not valid json"`) {
-		t.Errorf("invalid JSON should not be flattened: %s", output)
-	}
+	assert.Contains(t, output, `"data":"just a plain string"`, "plain string should not be flattened")
+	assert.Contains(t, output, `"invalid":"{not valid json"`, "invalid JSON should not be flattened")
 }
 
 func TestDefaultConfig(t *testing.T) {
 	cfg := DefaultConfig()
 
-	if cfg.Level != "INFO" {
-		t.Errorf("default level should be INFO, got %s", cfg.Level)
-	}
-	if cfg.Format != "text" {
-		t.Errorf("default format should be text, got %s", cfg.Format)
-	}
-	if cfg.Output != "stdout" {
-		t.Errorf("default output should be stdout, got %s", cfg.Output)
-	}
-	if cfg.AddSource != false {
-		t.Errorf("default AddSource should be false")
-	}
-	if cfg.TimeFormat != "datetime" {
-		t.Errorf("default TimeFormat should be datetime, got %s", cfg.TimeFormat)
-	}
-	if cfg.Timezone != "Asia/Shanghai" {
-		t.Errorf("default Timezone should be Asia/Shanghai, got %s", cfg.Timezone)
-	}
+	assert.Equal(t, "INFO", cfg.Level)
+	assert.Equal(t, "text", cfg.Format)
+	assert.Equal(t, "stdout", cfg.Output)
+	assert.False(t, cfg.AddSource)
+	assert.Equal(t, "datetime", cfg.TimeFormat)
+	assert.Equal(t, "Asia/Shanghai", cfg.Timezone)
 }
 
 func TestDefaultColoredConfig(t *testing.T) {
 	cfg := DefaultColoredConfig()
 
-	if cfg.Level != slog.LevelInfo {
-		t.Errorf("default level should be INFO")
-	}
-	if cfg.EnableColor != true {
-		t.Errorf("default EnableColor should be true")
-	}
-	if cfg.AddSource != true {
-		t.Errorf("default AddSource should be true")
-	}
+	assert.Equal(t, slog.LevelInfo, cfg.Level)
+	assert.True(t, cfg.EnableColor)
+	assert.True(t, cfg.AddSource)
 }
 
 func TestColoredHandlerMapFlatten(t *testing.T) {
@@ -619,18 +474,12 @@ func TestColoredHandlerMapFlatten(t *testing.T) {
 	handler := NewColoredHandler(&buf, config)
 	logger := slog.New(handler)
 
-	// 测试 map[string]any 平铺
 	logger.Info("test", "data", map[string]any{"user": "alice", "age": 30})
 
 	output := buf.String()
 	t.Logf("Output: %s", output)
-
-	if !strings.Contains(output, `"data.user":"alice"`) {
-		t.Errorf("map should be flattened, expected data.user: %s", output)
-	}
-	if !strings.Contains(output, `"data.age":"30"`) {
-		t.Errorf("map should be flattened, expected data.age: %s", output)
-	}
+	assert.Contains(t, output, `"data.user":"alice"`, "map should be flattened")
+	assert.Contains(t, output, `"data.age":"30"`, "map should be flattened")
 }
 
 func TestColoredHandlerStructFlatten(t *testing.T) {
@@ -642,7 +491,6 @@ func TestColoredHandlerStructFlatten(t *testing.T) {
 	handler := NewColoredHandler(&buf, config)
 	logger := slog.New(handler)
 
-	// 测试 struct 平铺
 	type User struct {
 		Name string `json:"name"`
 		Age  int    `json:"age"`
@@ -651,13 +499,8 @@ func TestColoredHandlerStructFlatten(t *testing.T) {
 
 	output := buf.String()
 	t.Logf("Output: %s", output)
-
-	if !strings.Contains(output, `"user.name":"bob"`) {
-		t.Errorf("struct should be flattened, expected user.name: %s", output)
-	}
-	if !strings.Contains(output, `"user.age":"25"`) {
-		t.Errorf("struct should be flattened, expected user.age: %s", output)
-	}
+	assert.Contains(t, output, `"user.name":"bob"`, "struct should be flattened")
+	assert.Contains(t, output, `"user.age":"25"`, "struct should be flattened")
 }
 
 func TestColoredHandlerSlogGroup(t *testing.T) {
@@ -669,18 +512,12 @@ func TestColoredHandlerSlogGroup(t *testing.T) {
 	handler := NewColoredHandler(&buf, config)
 	logger := slog.New(handler)
 
-	// 测试 slog.Group 平铺
 	logger.Info("test", slog.Group("request", "method", "GET", "path", "/api"))
 
 	output := buf.String()
 	t.Logf("Output: %s", output)
-
-	if !strings.Contains(output, `"request.method":"GET"`) {
-		t.Errorf("slog.Group should be flattened, expected request.method: %s", output)
-	}
-	if !strings.Contains(output, `"request.path":"/api"`) {
-		t.Errorf("slog.Group should be flattened, expected request.path: %s", output)
-	}
+	assert.Contains(t, output, `"request.method":"GET"`, "slog.Group should be flattened")
+	assert.Contains(t, output, `"request.path":"/api"`, "slog.Group should be flattened")
 }
 
 func TestColoredHandlerWithGroupPrefix(t *testing.T) {
@@ -691,19 +528,13 @@ func TestColoredHandlerWithGroupPrefix(t *testing.T) {
 	}
 	handler := NewColoredHandler(&buf, config)
 
-	// 使用 WithGroup 创建 logger
 	logger := slog.New(handler).WithGroup("request")
 	logger.Info("received", "method", "POST", "path", "/users")
 
 	output := buf.String()
 	t.Logf("Output: %s", output)
-
-	if !strings.Contains(output, `"request.method":"POST"`) {
-		t.Errorf("WithGroup should add prefix, expected request.method: %s", output)
-	}
-	if !strings.Contains(output, `"request.path":"/users"`) {
-		t.Errorf("WithGroup should add prefix, expected request.path: %s", output)
-	}
+	assert.Contains(t, output, `"request.method":"POST"`, "WithGroup should add prefix")
+	assert.Contains(t, output, `"request.path":"/users"`, "WithGroup should add prefix")
 }
 
 func TestColoredHandlerNestedWithGroup(t *testing.T) {
@@ -714,7 +545,6 @@ func TestColoredHandlerNestedWithGroup(t *testing.T) {
 	}
 	handler := NewColoredHandler(&buf, config)
 
-	// 嵌套 group
 	logger := slog.New(handler).
 		WithGroup("http").
 		With("version", "1.1").
@@ -724,15 +554,8 @@ func TestColoredHandlerNestedWithGroup(t *testing.T) {
 
 	output := buf.String()
 	t.Logf("Output: %s", output)
-
-	// version 应该在 http 下
-	if !strings.Contains(output, `"http.version":"1.1"`) {
-		t.Errorf("nested group should work, expected http.version: %s", output)
-	}
-	// method 应该在 http.request 下
-	if !strings.Contains(output, `"http.request.method":"GET"`) {
-		t.Errorf("nested group should work, expected http.request.method: %s", output)
-	}
+	assert.Contains(t, output, `"http.version":"1.1"`, "nested group should work")
+	assert.Contains(t, output, `"http.request.method":"GET"`, "nested group should work")
 }
 
 func TestConfigValidate(t *testing.T) {
@@ -818,28 +641,23 @@ func TestConfigValidate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.config.Validate()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			if tt.wantErr && err != nil && !strings.Contains(err.Error(), tt.errMsg) {
-				t.Errorf("Validate() error = %v, expected to contain %q", err, tt.errMsg)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errMsg)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}
 }
 
 func TestInitWithInvalidConfig(t *testing.T) {
-	// 测试 Init 时配置验证是否生效
 	err := Init(&Config{
 		Level:  "INFO",
 		Format: "invalid_format",
 	})
-	if err == nil {
-		t.Error("Init() should return error for invalid format")
-	}
-	if !strings.Contains(err.Error(), "invalid log format") {
-		t.Errorf("Init() error = %v, expected to contain 'invalid log format'", err)
-	}
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid log format")
 }
 
 func TestTextHandlerTimeFormat(t *testing.T) {
@@ -850,23 +668,13 @@ func TestTextHandlerTimeFormat(t *testing.T) {
 	logger.Info("test message")
 
 	output := buf.String()
+	assert.Contains(t, output, `time="20`, "should contain time field")
 
-	// 验证时间格式为 "YYYY-MM-DD HH:MM:SS"（不带 T 和时区后缀）
-	// 例如：time="2025-11-29 00:52:02"
-	if !strings.Contains(output, `time="20`) {
-		t.Errorf("should contain time field: %s", output)
-	}
-	// 不应该包含 RFC3339 格式的 T 分隔符
-	if strings.Contains(output, `time="20`) && strings.Contains(output, "T") && !strings.Contains(output, `msg="`) {
-		// 检查 time 字段中是否有 T（RFC3339 格式）
-		// 注意：消息内容可能包含 T，所以要精确匹配 time 字段
-		idx := strings.Index(output, `time="`)
-		if idx >= 0 {
-			timeField := output[idx : idx+30] // 取足够长度来检查
-			if strings.Contains(timeField, "T") {
-				t.Errorf("datetime format should not contain T separator: %s", output)
-			}
-		}
+	// datetime 格式不应包含 RFC3339 的 T 分隔符
+	idx := strings.Index(output, `time="`)
+	if idx >= 0 {
+		timeField := output[idx : idx+30]
+		assert.NotContains(t, timeField, "T", "datetime format should not contain T separator")
 	}
 }
 
@@ -876,8 +684,8 @@ func TestTextHandlerTimeFormats(t *testing.T) {
 		contains    string
 		notContains string
 	}{
-		{"datetime", "2025-", "T"}, // 包含日期格式，不包含 T
-		{"rfc3339", "T", ""},       // 包含 T 分隔符
+		{"datetime", "2025-", "T"},
+		{"rfc3339", "T", ""},
 	}
 
 	for _, tt := range tests {
@@ -891,28 +699,19 @@ func TestTextHandlerTimeFormats(t *testing.T) {
 			output := buf.String()
 			t.Logf("Output: %s", output)
 
-			// 验证 time 字段存在
-			if !strings.Contains(output, "time=") {
-				t.Errorf("should contain time field: %s", output)
-				return
-			}
+			assert.Contains(t, output, "time=", "should contain time field")
 
-			// datetime 格式：time="2025-11-29 00:52:02"（带引号，因为有空格）
-			// rfc3339 格式：time=2025-11-29T00:52:02+08:00（无引号）
-			if tt.contains != "" && !strings.Contains(output, tt.contains) {
-				t.Errorf("output should contain %q: %s", tt.contains, output)
+			if tt.contains != "" {
+				assert.Contains(t, output, tt.contains)
 			}
 			if tt.notContains != "" {
-				// 检查 time 字段中是否包含不期望的字符
 				idx := strings.Index(output, "time=")
 				endIdx := strings.Index(output[idx:], " level=")
 				if endIdx < 0 {
 					endIdx = len(output) - idx
 				}
 				timeField := output[idx : idx+endIdx]
-				if strings.Contains(timeField, tt.notContains) {
-					t.Errorf("time field should not contain %q: %s", tt.notContains, timeField)
-				}
+				assert.NotContains(t, timeField, tt.notContains, "time field should not contain %s", tt.notContains)
 			}
 		})
 	}
@@ -937,7 +736,7 @@ func TestClipWorkspacePath(t *testing.T) {
 		{
 			name:     "workspace path without trailing slash",
 			input:    "/workspace/project",
-			expected: "/workspace/project", // 没有后续路径，保持原样
+			expected: "/workspace/project",
 		},
 		{
 			name:     "no workspace prefix",
@@ -964,9 +763,7 @@ func TestClipWorkspacePath(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := clipWorkspacePath(tt.input)
-			if result != tt.expected {
-				t.Errorf("clipWorkspacePath(%q) = %q, want %q", tt.input, result, tt.expected)
-			}
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 }
