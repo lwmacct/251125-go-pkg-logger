@@ -18,29 +18,21 @@
 
 | 函数 | 说明 |
 |------|------|
-| `InitAuto()` | 自动检测环境（推荐），根据 `IS_SANDBOX` 选择开发/生产配置 |
-| `InitEnv()` | 从环境变量初始化，使用固定默认值 |
+| `InitEnv()` | 从环境变量初始化（推荐），自动检测 `IS_SANDBOX` 选择开发/生产配置 |
 | `InitCfg(cfg)` | 手动配置初始化 |
+| `EnvConfig()` | 返回根据环境变量生成的默认 `*Config`，可修改后传给 `InitCfg` |
 | `Close()` | 关闭资源（文件输出时必须调用） |
 
-### InitAuto 环境检测
+## 环境变量
 
-| 配置项 | 开发环境 (IS_SANDBOX=1) | 生产环境 |
-|--------|-------------------------|----------|
-| LOG_LEVEL | DEBUG | INFO |
-| LOG_FORMAT | color | json |
-| LOG_ADD_SOURCE | true | false |
-| LOG_TIME_FORMAT | time | datetime |
-
-### 环境变量
-
-| 变量 | 说明 | 默认值 |
-|------|------|--------|
-| `LOG_LEVEL` | DEBUG, INFO, WARN, ERROR | INFO |
-| `LOG_FORMAT` | json, text, color | color |
-| `LOG_OUTPUT` | stdout, stderr, 文件路径 | stdout |
-| `LOG_ADD_SOURCE` | true, false | true |
-| `LOG_TIME_FORMAT` | 见时间格式表 | datetime |
+| 变量 | 说明 | 开发环境默认 | 生产环境默认 |
+|------|------|-------------|-------------|
+| `IS_SANDBOX` | 环境检测 (1/true 为开发) | - | - |
+| `LOG_LEVEL` | DEBUG, INFO, WARN, ERROR | DEBUG | INFO |
+| `LOG_FORMAT` | json, text, color | color | json |
+| `LOG_OUTPUT` | stdout, stderr, 文件路径 | stdout | stdout |
+| `LOG_ADD_SOURCE` | true, false | true | false |
+| `LOG_TIME_FORMAT` | 见时间格式表 | time | datetime |
 
 ## 时间格式
 

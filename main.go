@@ -9,62 +9,49 @@ import (
 )
 
 func main() {
-	// 示例 1: InitAuto - 自动检测环境（推荐）
-	demoInitAuto()
-
-	// 示例 2: InitEnv - 从环境变量初始化
+	// 示例 1: InitEnv - 从环境变量初始化（推荐）
 	demoInitEnv()
 
-	// 示例 3: InitCfg - 手动配置
+	// 示例 2: InitCfg - 手动配置
 	demoInitCfg()
 
-	// 示例 4: 彩色输出
+	// 示例 3: 彩色输出
 	demoColoredOutput()
 
-	// 示例 5: JSON 输出
+	// 示例 4: JSON 输出
 	demoJSONOutput()
 
-	// 示例 6: 时间格式
+	// 示例 5: 时间格式
 	demoTimeFormats()
 
-	// 示例 7: Context 集成
+	// 示例 6: Context 集成
 	demoContextIntegration()
 
-	// 示例 8: 结构化日志与数据平铺
+	// 示例 7: 结构化日志与数据平铺
 	demoStructuredLogging()
-}
-
-// demoInitAuto 演示自动检测环境初始化
-func demoInitAuto() {
-	printSection("InitAuto - 自动检测环境")
-
-	// IS_SANDBOX=1 时使用开发配置，否则使用生产配置
-	// 开发: color + DEBUG + source + time
-	// 生产: json + INFO + no source + datetime
-	if err := logger.InitAuto(); err != nil {
-		panic(err)
-	}
-	defer logger.Close()
-
-	slog.Info("自动检测环境", "is_sandbox", os.Getenv("IS_SANDBOX"))
-	slog.Debug("调试信息（开发环境可见）")
 }
 
 // demoInitEnv 演示从环境变量初始化
 func demoInitEnv() {
-	printSection("InitEnv - 从环境变量初始化")
+	printSection("InitEnv - 从环境变量初始化（推荐）")
 
-	// 支持的环境变量：
-	// - LOG_LEVEL: DEBUG, INFO, WARN, ERROR（默认 INFO）
-	// - LOG_FORMAT: json, text, color（默认 color）
-	// - LOG_OUTPUT: stdout, stderr, 文件路径（默认 stdout）
-	// - LOG_ADD_SOURCE: true, false（默认 true）
-	// - LOG_TIME_FORMAT: datetime, time, rfc3339, rfc3339ms（默认 datetime）
+	// 自动检测 IS_SANDBOX 环境变量：
+	// - IS_SANDBOX=1: 开发环境 (color + DEBUG + source + time)
+	// - 其他: 生产环境 (json + INFO + no source + datetime)
+	//
+	// 支持的环境变量覆盖：
+	// - LOG_LEVEL: DEBUG, INFO, WARN, ERROR
+	// - LOG_FORMAT: json, text, color
+	// - LOG_OUTPUT: stdout, stderr, 文件路径
+	// - LOG_ADD_SOURCE: true, false
+	// - LOG_TIME_FORMAT: datetime, time, rfc3339, rfc3339ms
 	if err := logger.InitEnv(); err != nil {
 		panic(err)
 	}
+	defer logger.Close()
 
-	slog.Info("从环境变量初始化", "format", "使用固定默认值")
+	slog.Info("环境检测", "is_sandbox", os.Getenv("IS_SANDBOX"))
+	slog.Debug("调试信息（开发环境可见）")
 }
 
 // demoInitCfg 演示手动配置初始化
