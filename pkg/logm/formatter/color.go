@@ -21,11 +21,11 @@ const (
 	colorBold   = "\033[1m"
 )
 
-// ColorFormatter 彩色格式化器。
+// ColorTextFormatter 彩色格式化器。
 //
 // 输出带 ANSI 颜色的日志，适合终端开发调试。
 // 支持 JSON 字符串自动展开和嵌套结构平铺。
-type ColorFormatter struct {
+type ColorTextFormatter struct {
 	opts         *Options
 	enableColor  bool
 	flattenJSON  bool
@@ -33,16 +33,16 @@ type ColorFormatter struct {
 	trailingKeys []string
 }
 
-// ColorOption ColorFormatter 特有选项
-type ColorOption func(*ColorFormatter)
+// ColorOption ColorTextFormatter 特有选项
+type ColorOption func(*ColorTextFormatter)
 
-// Color 创建彩色格式化器。
-func Color(opts ...Option) *ColorFormatter {
+// ColorText 创建彩色格式化器。
+func ColorText(opts ...Option) *ColorTextFormatter {
 	o := defaultOptions()
 	for _, opt := range opts {
 		opt(o)
 	}
-	return &ColorFormatter{
+	return &ColorTextFormatter{
 		opts:         o,
 		enableColor:  true,
 		flattenJSON:  true,
@@ -53,20 +53,20 @@ func Color(opts ...Option) *ColorFormatter {
 
 // WithColor 启用/禁用颜色
 func WithColor(enable bool) ColorOption {
-	return func(f *ColorFormatter) {
+	return func(f *ColorTextFormatter) {
 		f.enableColor = enable
 	}
 }
 
 // WithFlattenJSON 启用/禁用 JSON 平铺
 func WithFlattenJSON(enable bool) ColorOption {
-	return func(f *ColorFormatter) {
+	return func(f *ColorTextFormatter) {
 		f.flattenJSON = enable
 	}
 }
 
 // Format 实现 Formatter 接口。
-func (f *ColorFormatter) Format(r *Record) ([]byte, error) {
+func (f *ColorTextFormatter) Format(r *Record) ([]byte, error) {
 	buf := getBuffer()
 	defer putBuffer(buf)
 
@@ -91,7 +91,7 @@ func (f *ColorFormatter) Format(r *Record) ([]byte, error) {
 	// 源代码位置
 	if r.Source != nil {
 		buf.WriteByte(' ')
-		f.writeColored(buf, colorPurple, r.Source.File+":"+strconv.Itoa(r.Source.Line))
+		f.writeColored(buf, colorPurple, FormatSource(r.Source, f.opts))
 	}
 
 	buf.WriteByte('\n')
@@ -100,7 +100,7 @@ func (f *ColorFormatter) Format(r *Record) ([]byte, error) {
 }
 
 // writeLevel 写入级别（带颜色）
-func (f *ColorFormatter) writeLevel(buf *bytes.Buffer, level slog.Level) {
+func (f *ColorTextFormatter) writeLevel(buf *bytes.Buffer, level slog.Level) {
 	var color, text string
 	switch {
 	case level < slog.LevelInfo:
@@ -124,7 +124,7 @@ func (f *ColorFormatter) writeLevel(buf *bytes.Buffer, level slog.Level) {
 }
 
 // writeColored 写入带颜色的文本
-func (f *ColorFormatter) writeColored(buf *bytes.Buffer, color, text string) {
+func (f *ColorTextFormatter) writeColored(buf *bytes.Buffer, color, text string) {
 	if f.enableColor {
 		buf.WriteString(color)
 	}
@@ -135,7 +135,7 @@ func (f *ColorFormatter) writeColored(buf *bytes.Buffer, color, text string) {
 }
 
 // writeAttrs 写入属性
-func (f *ColorFormatter) writeAttrs(buf *bytes.Buffer, attrs []slog.Attr, groups []string) {
+func (f *ColorTextFormatter) writeAttrs(buf *bytes.Buffer, attrs []slog.Attr, groups []string) {
 	prefix := ""
 	for _, g := range groups {
 		prefix += g + "."
@@ -151,7 +151,7 @@ func (f *ColorFormatter) writeAttrs(buf *bytes.Buffer, attrs []slog.Attr, groups
 }
 
 // writeAttr 写入单个属性
-func (f *ColorFormatter) writeAttr(buf *bytes.Buffer, attr slog.Attr, prefix string) {
+func (f *ColorTextFormatter) writeAttr(buf *bytes.Buffer, attr slog.Attr, prefix string) {
 	key := prefix + attr.Key
 	f.writeColored(buf, colorCyan, key)
 	buf.WriteByte('=')
@@ -159,7 +159,7 @@ func (f *ColorFormatter) writeAttr(buf *bytes.Buffer, attr slog.Attr, prefix str
 }
 
 // writeValue 写入值
-func (f *ColorFormatter) writeValue(buf *bytes.Buffer, v slog.Value, keyPath string) {
+func (f *ColorTextFormatter) writeValue(buf *bytes.Buffer, v slog.Value, keyPath string) {
 	v = v.Resolve()
 
 	switch v.Kind() {
@@ -219,7 +219,7 @@ func (f *ColorFormatter) writeValue(buf *bytes.Buffer, v slog.Value, keyPath str
 }
 
 // writeAny 写入任意类型
-func (f *ColorFormatter) writeAny(buf *bytes.Buffer, v any, keyPath string) {
+func (f *ColorTextFormatter) writeAny(buf *bytes.Buffer, v any, keyPath string) {
 	if v == nil {
 		f.writeColored(buf, colorGray, "null")
 		return
@@ -242,7 +242,7 @@ func (f *ColorFormatter) writeAny(buf *bytes.Buffer, v any, keyPath string) {
 }
 
 // tryFlattenJSON 尝试展开 JSON 为平铺格式
-func (f *ColorFormatter) tryFlattenJSON(s string, keyPath string) string {
+func (f *ColorTextFormatter) tryFlattenJSON(s string, keyPath string) string {
 	var data any
 	if err := json.Unmarshal([]byte(s), &data); err != nil {
 		return ""
@@ -254,7 +254,7 @@ func (f *ColorFormatter) tryFlattenJSON(s string, keyPath string) string {
 }
 
 // flattenValue 递归展开值
-func (f *ColorFormatter) flattenValue(v any, path string, parts *[]string) {
+func (f *ColorTextFormatter) flattenValue(v any, path string, parts *[]string) {
 	switch val := v.(type) {
 	case map[string]any:
 		for k, v := range val {
@@ -279,7 +279,7 @@ func (f *ColorFormatter) flattenValue(v any, path string, parts *[]string) {
 }
 
 // coloredKV 生成带颜色的 key=value
-func (f *ColorFormatter) coloredKV(key, value string) string {
+func (f *ColorTextFormatter) coloredKV(key, value string) string {
 	if f.enableColor {
 		return colorCyan + key + colorReset + "=" + colorGreen + value + colorReset
 	}

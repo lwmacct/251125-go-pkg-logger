@@ -58,10 +58,10 @@ func Example_slogCompatible() {
 
 // Example_development 展示开发环境预设配置。
 //
-// Development() 预设会自动配置彩色输出、DEBUG 级别、显示源代码位置。
+// PresetDev() 预设会自动配置彩色输出、DEBUG 级别、显示源代码位置。
 func Example_development() {
 	// 使用开发环境预设：彩色输出 + DEBUG + 源代码位置
-	_ = logm.Init(logm.Development()...)
+	_ = logm.Init(logm.PresetDev()...)
 	defer func() { _ = logm.Close() }()
 
 	// 此处不实际输出日志，仅展示 API 用法
@@ -71,10 +71,10 @@ func Example_development() {
 
 // Example_production 展示生产环境预设配置。
 //
-// Production() 预设会自动配置 JSON 格式、INFO 级别、RFC3339 时间格式。
+// PresetProd() 预设会自动配置 JSON 格式、INFO 级别、RFC3339 时间格式。
 func Example_production() {
 	// 使用生产环境预设：JSON + INFO + RFC3339
-	_ = logm.Init(logm.Production()...)
+	_ = logm.Init(logm.PresetProd()...)
 	defer func() { _ = logm.Close() }()
 
 	// 此处不实际输出日志，仅展示 API 用法
@@ -84,11 +84,11 @@ func Example_production() {
 
 // Example_fromEnv 展示通过环境变量初始化日志的方式。
 //
-// FromEnv 会根据 IS_SANDBOX 环境变量自动选择开发或生产配置。
+// PresetFromEnv 会根据 LOGM_ENV 环境变量自动选择开发或生产配置。
 func Example_fromEnv() {
-	// FromEnv 从环境变量读取配置，适合大多数应用
-	// 支持: LOG_LEVEL, LOG_FORMAT, LOG_OUTPUT, LOG_ADD_SOURCE 等
-	_ = logm.Init(logm.FromEnv()...)
+	// PresetFromEnv 从环境变量读取配置，适合大多数应用
+	// 支持: LOGM_ENV, LOGM_LEVEL, LOGM_FORMAT, LOGM_OUTPUT, LOGM_SOURCE 等
+	_ = logm.Init(logm.PresetFromEnv()...)
 	defer func() { _ = logm.Close() }()
 
 	// 此处不实际输出日志，仅展示 API 用法
@@ -208,7 +208,7 @@ func ExampleFromContext() {
 func Example_coloredOutput() {
 	_ = logm.Init(
 		logm.WithLevel("DEBUG"),
-		logm.WithFormatter(formatter.Color()),
+		logm.WithFormatter(formatter.ColorText()),
 		logm.WithTimeFormat("time"),
 		logm.WithAddSource(true),
 	)

@@ -29,13 +29,13 @@ func TestInit_WithLevel(t *testing.T) {
 }
 
 func TestInit_Development(t *testing.T) {
-	err := Init(Development()...)
+	err := Init(PresetDev()...)
 	assert.NoError(t, err)
 	defer func() { _ = Close() }()
 }
 
 func TestInit_Production(t *testing.T) {
-	err := Init(Production()...)
+	err := Init(PresetProd()...)
 	assert.NoError(t, err)
 	defer func() { _ = Close() }()
 }

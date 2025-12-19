@@ -52,9 +52,7 @@ func (f *JSONFormatter) Format(r *Record) ([]byte, error) {
 	// 源代码位置
 	if r.Source != nil {
 		buf.WriteString(`,"source":"`)
-		buf.WriteString(r.Source.File)
-		buf.WriteByte(':')
-		buf.WriteString(strconv.Itoa(r.Source.Line))
+		buf.WriteString(FormatSource(r.Source, f.opts))
 		buf.WriteByte('"')
 	}
 

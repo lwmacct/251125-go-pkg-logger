@@ -16,7 +16,7 @@
 //
 //	func main() {
 //	    // 开发环境：彩色输出 + DEBUG + 源代码位置
-//	    logm.MustInit(logm.Development()...)
+//	    logm.MustInit(logm.PresetDev()...)
 //	    defer logm.Close()
 //
 //	    slog.Info("应用启动", "version", "1.0.0")
@@ -24,11 +24,11 @@
 //
 // 生产环境：
 //
-//	logm.MustInit(logm.Production()...)
+//	logm.MustInit(logm.PresetProd()...)
 //
 // 从环境变量读取配置：
 //
-//	logm.MustInit(logm.FromEnv()...)
+//	logm.MustInit(logm.PresetFromEnv()...)
 //
 // # Functional Options
 //
@@ -36,7 +36,7 @@
 //
 //	logm.Init(
 //	    logm.WithLevel("DEBUG"),
-//	    logm.WithFormatter(formatter.Color()),
+//	    logm.WithFormatter(formatter.ColorText()),
 //	    logm.WithWriter(writer.Multi(
 //	        writer.Stdout(),
 //	        writer.File("/var/log/app.log", writer.WithRotation(100, 7)),
@@ -50,9 +50,10 @@
 //
 //	import "github.com/.../logm/formatter"
 //
-//	formatter.JSON()   // JSON 格式，适合生产环境
-//	formatter.Text()   // 键值对格式，兼容传统工具
-//	formatter.Color()  // 彩色输出，适合开发环境
+//	formatter.JSON()       // JSON 格式，适合生产环境
+//	formatter.Text()       // 键值对格式，兼容传统工具
+//	formatter.ColorText()  // 彩色文本，适合开发环境
+//	formatter.ColorJSON()  // 彩色 JSON，适合终端调试
 //
 // writer 子包提供输出目标实现：
 //

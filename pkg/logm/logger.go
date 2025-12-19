@@ -22,14 +22,14 @@ var (
 //
 //	logm.Init(
 //	    logm.WithLevel("DEBUG"),
-//	    logm.WithFormatter(formatter.Color()),
+//	    logm.WithFormatter(formatter.ColorText()),
 //	    logm.WithWriter(writer.Stdout()),
 //	)
 //
 // 也可使用预设配置：
 //
-//	logm.Init(logm.Development()...)
-//	logm.Init(logm.Production()...)
+//	logm.Init(logm.PresetDev()...)
+//	logm.Init(logm.PresetProd()...)
 func Init(opts ...Option) error {
 	o := defaultOptions()
 	o.apply(opts...)
@@ -90,7 +90,7 @@ func Init(opts ...Option) error {
 // 适用于程序启动阶段，日志系统初始化失败通常意味着程序无法正常运行：
 //
 //	func main() {
-//	    logm.MustInit(logm.Development()...)
+//	    logm.MustInit(logm.PresetDev()...)
 //	    defer logm.Close()
 //	    // ...
 //	}

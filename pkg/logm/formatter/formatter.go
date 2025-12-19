@@ -28,8 +28,10 @@ type Formatter interface {
 
 // Options 格式化器通用选项
 type Options struct {
-	TimeFormat string
-	Location   *time.Location
+	TimeFormat  string
+	Location    *time.Location
+	SourceClip  string // Source 路径裁剪前缀 (如 "/workspace/")
+	SourceDepth int    // Source 路径保留层数 (默认 3)
 }
 
 // Option 选项函数
@@ -54,6 +56,20 @@ func WithTimeFormat(format string) Option {
 func WithTimezone(tz string) Option {
 	return func(o *Options) {
 		o.Location = loadTimezone(tz)
+	}
+}
+
+// WithSourceClip 设置 Source 路径裁剪前缀
+func WithSourceClip(prefix string) Option {
+	return func(o *Options) {
+		o.SourceClip = prefix
+	}
+}
+
+// WithSourceDepth 设置 Source 路径保留层数
+func WithSourceDepth(depth int) Option {
+	return func(o *Options) {
+		o.SourceDepth = depth
 	}
 }
 
@@ -94,5 +110,6 @@ func loadTimezone(tz string) *time.Location {
 var (
 	_ Formatter = (*JSONFormatter)(nil)
 	_ Formatter = (*TextFormatter)(nil)
-	_ Formatter = (*ColorFormatter)(nil)
+	_ Formatter = (*ColorTextFormatter)(nil)
+	_ Formatter = (*ColorJSONFormatter)(nil)
 )

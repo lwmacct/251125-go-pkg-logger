@@ -64,7 +64,8 @@ func WithLevelVar(lv *slog.LevelVar) Option {
 // 使用 formatter 子包中的预定义格式化器：
 //   - formatter.JSON()
 //   - formatter.Text()
-//   - formatter.Color()
+//   - formatter.ColorText()
+//   - formatter.ColorJSON()
 func WithFormatter(f Formatter) Option {
 	return func(o *options) {
 		o.formatter = f

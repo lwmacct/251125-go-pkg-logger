@@ -26,7 +26,7 @@ import (
 
 func main() {
     // 一次性初始化（失败时 panic）
-    logm.MustInit(logm.Development()...)
+    logm.MustInit(logm.PresetAuto()...)
     defer logm.Close()
 
     // 之后直接使用标准库 slog
