@@ -40,7 +40,7 @@ func DefaultScheme() *ColorScheme {
 		Key:    ColorCyan,
 		String: ColorGreen,
 		Number: ColorYellow,
-		Source: ColorPurple,
+		Source: ColorGray,
 		Null:   ColorGray,
 	}
 }
