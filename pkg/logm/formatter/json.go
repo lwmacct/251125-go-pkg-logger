@@ -159,6 +159,13 @@ func (f *JSONFormatter) writeAny(buf *bytes.Buffer, v any) {
 		return
 	}
 
+	// 特殊处理 error 接口
+	// json.Marshal(error) 返回 {} 因为 error 接口没有导出字段
+	if err, ok := v.(error); ok {
+		writeJSONString(buf, err.Error())
+		return
+	}
+
 	// 尝试 JSON 序列化
 	data, err := json.Marshal(v)
 	if err != nil {

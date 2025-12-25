@@ -1,6 +1,7 @@
 package formatter
 
 import (
+	"errors"
 	"log/slog"
 	"strings"
 	"testing"
@@ -132,6 +133,27 @@ func TestJSONFormatter_Levels(t *testing.T) {
 			assert.Contains(t, string(data), tt.expected)
 		})
 	}
+}
+
+// TestJSONFormatter_ErrorAttr 验证 error 接口被正确序列化
+// BUG: json.Marshal(error) 返回 {} 因为 error 接口没有导出字段
+func TestJSONFormatter_ErrorAttr(t *testing.T) {
+	f := JSON()
+	testErr := errors.New("database connection failed")
+	r := newTestRecord("operation failed",
+		slog.Any("error", testErr),
+	)
+
+	data, err := f.Format(r)
+	require.NoError(t, err)
+
+	output := string(data)
+	t.Logf("Output: %s", output)
+
+	// 期望: "error":"database connection failed"
+	// 实际: "error":{}  ← 这是 BUG
+	assert.Contains(t, output, `"error":"database connection failed"`)
+	assert.NotContains(t, output, `"error":{}`, "error should not be serialized as empty object")
 }
 
 // ============ Text Formatter Tests ============
