@@ -30,10 +30,10 @@ type Formatter interface {
 type Options struct {
 	TimeFormat  string
 	Location    *time.Location
-	SourceClip  string       // Source 路径裁剪前缀 (如 "/workspace/")
-	SourceDepth int          // Source 路径保留层数 (默认 3)
-	ColorScheme *ColorScheme // 颜色配置方案
-	EnableColor bool         // 启用颜色输出
+	SourceClip  string          // Source 路径裁剪前缀 (如 "/workspace/")
+	SourceDepth int             // Source 路径保留层数 (默认 3)
+	ColorScheme *ColorScheme    // 颜色配置方案
+	EnableColor bool            // 启用颜色输出
 	RawFields   map[string]bool // 不加引号直接输出的字段名集合
 }
 
